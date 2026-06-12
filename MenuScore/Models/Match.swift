@@ -40,15 +40,15 @@ enum MatchStatus: Equatable {
     }
 
     /// Suffix appended to the menu bar label: the clock for live games,
-    /// kickoff time for games starting today.
+    /// kickoff time for upcoming ones, FT for finished ones.
     var menuBarSuffix: String {
         switch self {
         case .live(let display):
             return " \(display)"
-        case .upcoming(let kickoff) where Calendar.current.isDateInToday(kickoff):
-            return " \(kickoff.formatted(date: .omitted, time: .shortened))"
-        default:
-            return ""
+        case .upcoming:
+            return " \(shortLabel)"
+        case .finished:
+            return " FT"
         }
     }
 }

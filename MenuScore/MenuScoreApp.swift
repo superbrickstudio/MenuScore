@@ -23,15 +23,23 @@ struct MenuBarLabel: View {
     var body: some View {
         if let match {
             Text(labelText(for: match))
+                .font(.body.monospacedDigit())
         } else {
             Image(systemName: "soccerball")
         }
     }
 
+    /// Compact, flags-first label: "🇨🇦 0–0 🇧🇦 64'". Falls back to the
+    /// team code when no flag is known for it.
     private func labelText(for match: Match) -> String {
-        [match.home.flag, match.scoreline, match.away.flag]
-            .filter { !$0.isEmpty }
-            .joined(separator: " ")
-            + match.status.menuBarSuffix
+        let home = match.home.flag.isEmpty ? match.home.code : match.home.flag
+        let away = match.away.flag.isEmpty ? match.away.code : match.away.flag
+        let middle: String
+        if let homeScore = match.homeScore, let awayScore = match.awayScore {
+            middle = "\(homeScore)–\(awayScore)"
+        } else {
+            middle = "vs"
+        }
+        return "\(home) \(middle) \(away)\(match.status.menuBarSuffix)"
     }
 }
