@@ -58,7 +58,14 @@ final class MatchStore: ObservableObject {
         isRefreshing = true
         defer { isRefreshing = false }
         do {
-            matches = try await client.fetchMatches()
+            let fresh = try await client.fetchMatches()
+            // Only notify on changes between fetches, never on launch.
+            if lastUpdated != nil {
+                NotificationManager.shared.notifyChanges(from: matches, to: fresh)
+            } else {
+                NotificationManager.shared.requestAuthorizationIfNeeded()
+            }
+            matches = fresh
             lastUpdated = .now
             errorMessage = nil
         } catch {

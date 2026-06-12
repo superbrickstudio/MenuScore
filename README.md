@@ -26,7 +26,8 @@ If Xcode complains about signing, select the *MenuScore* target →
 - [x] **Phase 1 — Skeleton**: menu bar item + styled popover with sample data
 - [x] **Phase 2 — Live data**: API client, polling engine, real scores
 - [x] **Phase 3 — Stats panel**: tap a match for scorers and cards
-- [ ] **Phase 4 — Polish**: group standings, favorite team, notifications, launch at login, settings
+- [x] **Phase 4a — Notifications**: kickoff, goals, and full-time alerts
+- [ ] **Phase 4 — Polish**: group standings, favorite team, launch at login, settings
 - [ ] **Phase 5 — Distribution**: icon, notarization, auto-updates
 
 ## Architecture notes
