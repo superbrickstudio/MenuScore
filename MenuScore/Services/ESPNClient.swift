@@ -51,6 +51,11 @@ struct ESPNClient: WorldCupAPIClient {
         let date = parseDate(event.date ?? competition.date) ?? .now
         let status = matchStatus(from: event.status ?? competition.status, kickoff: date)
 
+        // ESPN reports "0" scores before kickoff; suppress them so
+        // unstarted matches render as "vs" instead of 0–0.
+        let hasStarted: Bool
+        if case .upcoming = status { hasStarted = false } else { hasStarted = true }
+
         var venue = competition.venue?.fullName ?? ""
         if let city = competition.venue?.address?.city, !city.isEmpty {
             venue += venue.isEmpty ? city : ", \(city)"
@@ -61,8 +66,8 @@ struct ESPNClient: WorldCupAPIClient {
             date: date,
             home: home,
             away: away,
-            homeScore: Int(homeSide.score ?? ""),
-            awayScore: Int(awaySide.score ?? ""),
+            homeScore: hasStarted ? Int(homeSide.score ?? "") : nil,
+            awayScore: hasStarted ? Int(awaySide.score ?? "") : nil,
             status: status,
             stage: stage(from: competition.notes),
             venue: venue
