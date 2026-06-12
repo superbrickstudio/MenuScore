@@ -58,22 +58,22 @@ struct MatchDetailView: View {
                 dismiss()
             } label: {
                 Label("All matches", systemImage: "chevron.left")
-                    .font(.callout)
+                    .font(.callout.weight(.semibold))
             }
             .buttonStyle(.borderless)
             Spacer()
             if match.status.isLive {
                 HStack(spacing: 4) {
-                    LiveDot()
+                    LiveDot(color: .white)
                     Text(match.status.shortLabel)
                         .font(.caption.weight(.bold))
-                        .foregroundStyle(.red)
                 }
             }
         }
+        .foregroundStyle(.white)
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(.quaternary.opacity(0.5))
+        .background(Brand.gradient)
     }
 
     private var scoreboard: some View {
@@ -83,7 +83,7 @@ struct MatchDetailView: View {
             VStack(spacing: 2) {
                 if let home = match.homeScore, let away = match.awayScore {
                     Text("\(home) – \(away)")
-                        .font(.system(size: 30, weight: .bold).monospacedDigit())
+                        .font(Brand.displayFont(size: 32).monospacedDigit())
                 } else {
                     Text("vs")
                         .font(.title2)
@@ -91,7 +91,7 @@ struct MatchDetailView: View {
                 }
                 Text(match.status.shortLabel)
                     .font(.caption.weight(match.status.isLive ? .bold : .regular))
-                    .foregroundStyle(match.status.isLive ? .red : .secondary)
+                    .foregroundStyle(match.status.isLive ? Brand.red : Color.secondary)
             }
             Spacer()
             teamColumn(match.away)

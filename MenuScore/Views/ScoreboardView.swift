@@ -33,7 +33,7 @@ struct ScoreboardView: View {
     @ViewBuilder
     private var matchSections: some View {
         if !store.liveMatches.isEmpty {
-            sectionLabel("Live")
+            sectionLabel("Live", color: Brand.red)
             ForEach(store.liveMatches) { match in
                 matchLink(match)
             }
@@ -77,10 +77,12 @@ struct ScoreboardView: View {
 
     private var header: some View {
         HStack(spacing: 8) {
-            Image(systemName: "trophy.fill")
-                .foregroundStyle(.yellow)
-            Text("World Cup 2026")
-                .font(.headline)
+            Text("⚽️")
+                .font(.system(size: 15))
+            Text("MENUSCORE ′26")
+                .font(Brand.displayFont(size: 15))
+                .italic()
+                .tracking(0.5)
             Spacer()
             Button {
                 Task { await store.refresh() }
@@ -90,14 +92,16 @@ struct ScoreboardView: View {
                         .controlSize(.small)
                 } else {
                     Image(systemName: "arrow.clockwise")
+                        .fontWeight(.semibold)
                 }
             }
             .buttonStyle(.borderless)
             .help("Refresh now")
         }
+        .foregroundStyle(.white)
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(.quaternary.opacity(0.5))
+        .background(Brand.gradient)
     }
 
     private var footer: some View {
@@ -128,10 +132,11 @@ struct ScoreboardView: View {
         .background(.quaternary.opacity(0.5))
     }
 
-    private func sectionLabel(_ title: String) -> some View {
+    private func sectionLabel(_ title: String, color: Color = .secondary) -> some View {
         Text(title.uppercased())
-            .font(.caption2.weight(.semibold))
-            .foregroundStyle(.secondary)
+            .font(.caption2.weight(.heavy))
+            .tracking(1)
+            .foregroundStyle(color)
     }
 }
 

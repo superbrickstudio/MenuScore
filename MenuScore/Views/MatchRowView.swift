@@ -20,7 +20,7 @@ struct MatchRowView: View {
                 }
                 Text(match.status.shortLabel)
                     .font(.caption2.weight(match.status.isLive ? .bold : .regular))
-                    .foregroundStyle(match.status.isLive ? .red : .secondary)
+                    .foregroundStyle(match.status.isLive ? Brand.red : Color.secondary)
                 if let stage = match.stage {
                     Text("· \(stage)")
                         .font(.caption2)
@@ -36,8 +36,10 @@ struct MatchRowView: View {
                 .overlay(
                     RoundedRectangle(cornerRadius: 10)
                         .strokeBorder(
-                            match.status.isLive ? .red.opacity(0.35) : Color.primary.opacity(0.08),
-                            lineWidth: 1
+                            match.status.isLive
+                                ? AnyShapeStyle(Brand.gradient)
+                                : AnyShapeStyle(Color.primary.opacity(0.08)),
+                            lineWidth: match.status.isLive ? 1.5 : 1
                         )
                 )
         )
@@ -47,7 +49,7 @@ struct MatchRowView: View {
         Group {
             if let home = match.homeScore, let away = match.awayScore {
                 Text("\(home) – \(away)")
-                    .font(.title3.weight(.bold).monospacedDigit())
+                    .font(Brand.displayFont(size: 19).monospacedDigit())
             } else {
                 Text("vs")
                     .font(.callout)
@@ -70,13 +72,14 @@ struct MatchRowView: View {
     }
 }
 
-/// Pulsing red dot for live matches.
+/// Pulsing dot for live matches.
 struct LiveDot: View {
+    var color: Color = Brand.red
     @State private var pulsing = false
 
     var body: some View {
         Circle()
-            .fill(.red)
+            .fill(color)
             .frame(width: 6, height: 6)
             .opacity(pulsing ? 0.3 : 1)
             .animation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true), value: pulsing)
