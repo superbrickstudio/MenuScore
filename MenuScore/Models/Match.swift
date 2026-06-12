@@ -1,6 +1,6 @@
 import Foundation
 
-struct Team: Identifiable, Equatable {
+struct Team: Identifiable, Hashable {
     let code: String   // three-letter FIFA code, e.g. "MEX"
     let name: String
     let flag: String   // emoji flag, may be empty for unknown codes
@@ -13,7 +13,7 @@ struct Team: Identifiable, Equatable {
     }
 }
 
-enum MatchStatus: Equatable {
+enum MatchStatus: Hashable {
     case upcoming(kickoff: Date)
     /// `display` comes from the provider, e.g. "64'", "45'+2", "HT".
     case live(display: String)
@@ -53,7 +53,41 @@ enum MatchStatus: Equatable {
     }
 }
 
-struct Match: Identifiable, Equatable {
+/// A key moment in a match: goal or card.
+struct MatchEvent: Identifiable, Hashable {
+    enum Kind: Hashable {
+        case goal
+        case ownGoal
+        case penaltyGoal
+        case yellowCard
+        case redCard
+
+        var symbol: String {
+            switch self {
+            case .goal, .ownGoal, .penaltyGoal: return "⚽️"
+            case .yellowCard: return "🟨"
+            case .redCard: return "🟥"
+            }
+        }
+
+        var suffix: String {
+            switch self {
+            case .ownGoal: return " (OG)"
+            case .penaltyGoal: return " (P)"
+            default: return ""
+            }
+        }
+    }
+
+    let kind: Kind
+    let clockDisplay: String   // e.g. "23'", "45'+2"
+    let playerName: String
+    let isHome: Bool
+
+    var id: String { "\(clockDisplay)|\(playerName)|\(kind.symbol)\(kind.suffix)" }
+}
+
+struct Match: Identifiable, Hashable {
     let id: String
     let date: Date
     let home: Team
@@ -63,6 +97,7 @@ struct Match: Identifiable, Equatable {
     var status: MatchStatus
     var stage: String?   // e.g. "Group A", "Round of 32"
     var venue: String
+    var events: [MatchEvent] = []
 
     /// "MEX 2–1 MAR" for started games, "MEX vs MAR" otherwise.
     var scoreline: String {

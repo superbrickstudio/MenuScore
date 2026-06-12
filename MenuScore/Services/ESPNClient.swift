@@ -70,8 +70,36 @@ struct ESPNClient: WorldCupAPIClient {
             awayScore: hasStarted ? Int(awaySide.score ?? "") : nil,
             status: status,
             stage: stage(from: competition.notes),
-            venue: venue
+            venue: venue,
+            events: matchEvents(from: competition.details, homeTeamID: homeSide.team?.id)
         )
+    }
+
+    private static func matchEvents(
+        from details: [ESPNDetail]?,
+        homeTeamID: String?
+    ) -> [MatchEvent] {
+        (details ?? []).compactMap { detail in
+            let kind: MatchEvent.Kind
+            if detail.redCard == true {
+                kind = .redCard
+            } else if detail.yellowCard == true {
+                kind = .yellowCard
+            } else if detail.scoringPlay == true {
+                kind = detail.ownGoal == true ? .ownGoal
+                     : detail.penaltyKick == true ? .penaltyGoal
+                     : .goal
+            } else {
+                return nil   // ignore substitutions, VAR notes, etc.
+            }
+            let player = detail.athletesInvolved?.first
+            return MatchEvent(
+                kind: kind,
+                clockDisplay: detail.clock?.displayValue ?? "",
+                playerName: player?.shortName ?? player?.displayName ?? "Unknown",
+                isHome: detail.team?.id != nil && detail.team?.id == homeTeamID
+            )
+        }
     }
 
     private static func team(from competitor: ESPNCompetitor) -> Team? {
@@ -172,6 +200,37 @@ struct ESPNCompetition: Decodable {
     let competitors: [ESPNCompetitor]?
     let status: ESPNStatus?
     let notes: [ESPNNote]?
+    let details: [ESPNDetail]?
+}
+
+struct ESPNDetail: Decodable {
+    let type: ESPNDetailType?
+    let clock: ESPNClock?
+    let team: ESPNTeamRef?
+    let scoringPlay: Bool?
+    let penaltyKick: Bool?
+    let ownGoal: Bool?
+    let redCard: Bool?
+    let yellowCard: Bool?
+    let athletesInvolved: [ESPNAthlete]?
+
+    struct ESPNDetailType: Decodable {
+        let text: String?
+    }
+
+    struct ESPNClock: Decodable {
+        let value: Double?
+        let displayValue: String?
+    }
+
+    struct ESPNTeamRef: Decodable {
+        let id: String?
+    }
+
+    struct ESPNAthlete: Decodable {
+        let displayName: String?
+        let shortName: String?
+    }
 }
 
 struct ESPNNote: Decodable {
@@ -194,6 +253,7 @@ struct ESPNCompetitor: Decodable {
 }
 
 struct ESPNTeam: Decodable {
+    let id: String?
     let abbreviation: String?
     let displayName: String?
     let shortDisplayName: String?

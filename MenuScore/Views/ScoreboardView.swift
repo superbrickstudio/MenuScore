@@ -5,21 +5,26 @@ struct ScoreboardView: View {
     @EnvironmentObject private var store: MatchStore
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            header
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 0) {
+                header
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
-                    if store.matches.isEmpty {
-                        emptyState
-                    } else {
-                        matchSections
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 12) {
+                        if store.matches.isEmpty {
+                            emptyState
+                        } else {
+                            matchSections
+                        }
                     }
+                    .padding(12)
                 }
-                .padding(12)
-            }
 
-            footer
+                footer
+            }
+            .navigationDestination(for: Match.self) { match in
+                MatchDetailView(matchID: match.id, fallback: match)
+            }
         }
         .frame(width: 320)
         .frame(maxHeight: 480)
@@ -30,21 +35,30 @@ struct ScoreboardView: View {
         if !store.liveMatches.isEmpty {
             sectionLabel("Live")
             ForEach(store.liveMatches) { match in
-                MatchRowView(match: match)
+                matchLink(match)
             }
         }
         if !store.upcomingMatches.isEmpty {
             sectionLabel("Upcoming")
             ForEach(store.upcomingMatches) { match in
-                MatchRowView(match: match)
+                matchLink(match)
             }
         }
         if !store.finishedMatches.isEmpty {
             sectionLabel("Results")
             ForEach(store.finishedMatches) { match in
-                MatchRowView(match: match)
+                matchLink(match)
             }
         }
+    }
+
+    private func matchLink(_ match: Match) -> some View {
+        NavigationLink(value: match) {
+            MatchRowView(match: match)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help("Show match details")
     }
 
     private var emptyState: some View {
