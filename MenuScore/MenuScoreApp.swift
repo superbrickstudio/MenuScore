@@ -22,9 +22,16 @@ struct MenuBarLabel: View {
 
     var body: some View {
         if let match {
-            Text("\(match.home.flag) \(match.scoreline) \(match.away.flag)\(match.status.menuBarSuffix)")
+            Text(labelText(for: match))
         } else {
             Image(systemName: "soccerball")
         }
+    }
+
+    private func labelText(for match: Match) -> String {
+        [match.home.flag, match.scoreline, match.away.flag]
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+            + match.status.menuBarSuffix
     }
 }

@@ -3,14 +3,20 @@ import Foundation
 struct Team: Identifiable, Equatable {
     let code: String   // three-letter FIFA code, e.g. "MEX"
     let name: String
-    let flag: String   // emoji flag
+    let flag: String   // emoji flag, may be empty for unknown codes
 
     var id: String { code }
+
+    /// "🇲🇽 MEX" or just "MEX" when no flag is known.
+    var flaggedCode: String {
+        flag.isEmpty ? code : "\(flag) \(code)"
+    }
 }
 
 enum MatchStatus: Equatable {
     case upcoming(kickoff: Date)
-    case live(minute: Int)
+    /// `display` comes from the provider, e.g. "64'", "45'+2", "HT".
+    case live(display: String)
     case finished
 
     var isLive: Bool {
@@ -18,13 +24,16 @@ enum MatchStatus: Equatable {
         return false
     }
 
-    /// Short text shown next to the score, e.g. "64′" or "FT".
+    /// Short text shown next to the score, e.g. "64'" or "FT".
     var shortLabel: String {
         switch self {
         case .upcoming(let kickoff):
-            return kickoff.formatted(date: .omitted, time: .shortened)
-        case .live(let minute):
-            return "\(minute)′"
+            if Calendar.current.isDateInToday(kickoff) {
+                return kickoff.formatted(date: .omitted, time: .shortened)
+            }
+            return kickoff.formatted(.dateTime.weekday(.abbreviated).hour().minute())
+        case .live(let display):
+            return display
         case .finished:
             return "FT"
         }
@@ -32,22 +41,23 @@ enum MatchStatus: Equatable {
 
     /// Suffix appended to the menu bar label for live games.
     var menuBarSuffix: String {
-        if case .live(let minute) = self { return " \(minute)′" }
+        if case .live(let display) = self { return " \(display)" }
         return ""
     }
 }
 
 struct Match: Identifiable, Equatable {
     let id: String
+    let date: Date
     let home: Team
     let away: Team
     var homeScore: Int?
     var awayScore: Int?
     var status: MatchStatus
-    var group: String?
+    var stage: String?   // e.g. "Group A", "Round of 32"
     var venue: String
 
-    /// "2–1" for started games, "vs" otherwise.
+    /// "MEX 2–1 MAR" for started games, "MEX vs MAR" otherwise.
     var scoreline: String {
         guard let homeScore, let awayScore else {
             return "\(home.code) vs \(away.code)"

@@ -21,10 +21,11 @@ struct MatchRowView: View {
                 Text(match.status.shortLabel)
                     .font(.caption2.weight(match.status.isLive ? .bold : .regular))
                     .foregroundStyle(match.status.isLive ? .red : .secondary)
-                if let group = match.group {
-                    Text("· Group \(group)")
+                if let stage = match.stage {
+                    Text("· \(stage)")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
+                        .lineLimit(1)
                 }
             }
         }
@@ -59,12 +60,13 @@ struct MatchRowView: View {
         HStack(spacing: 6) {
             if trailing {
                 Text(team.code).font(.callout.weight(.semibold))
-                Text(team.flag).font(.title3)
+                if !team.flag.isEmpty { Text(team.flag).font(.title3) }
             } else {
-                Text(team.flag).font(.title3)
+                if !team.flag.isEmpty { Text(team.flag).font(.title3) }
                 Text(team.code).font(.callout.weight(.semibold))
             }
         }
+        .help(team.name)
     }
 }
 

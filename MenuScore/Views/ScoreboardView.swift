@@ -10,17 +10,10 @@ struct ScoreboardView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
-                    if !store.liveMatches.isEmpty {
-                        sectionLabel("Live")
-                        ForEach(store.liveMatches) { match in
-                            MatchRowView(match: match)
-                        }
-                    }
-                    if !store.otherMatches.isEmpty {
-                        sectionLabel("Today")
-                        ForEach(store.otherMatches) { match in
-                            MatchRowView(match: match)
-                        }
+                    if store.matches.isEmpty {
+                        emptyState
+                    } else {
+                        matchSections
                     }
                 }
                 .padding(12)
@@ -32,6 +25,42 @@ struct ScoreboardView: View {
         .frame(maxHeight: 480)
     }
 
+    @ViewBuilder
+    private var matchSections: some View {
+        if !store.liveMatches.isEmpty {
+            sectionLabel("Live")
+            ForEach(store.liveMatches) { match in
+                MatchRowView(match: match)
+            }
+        }
+        if !store.upcomingMatches.isEmpty {
+            sectionLabel("Upcoming")
+            ForEach(store.upcomingMatches) { match in
+                MatchRowView(match: match)
+            }
+        }
+        if !store.finishedMatches.isEmpty {
+            sectionLabel("Results")
+            ForEach(store.finishedMatches) { match in
+                MatchRowView(match: match)
+            }
+        }
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 8) {
+            Image(systemName: store.errorMessage == nil ? "soccerball" : "wifi.exclamationmark")
+                .font(.largeTitle)
+                .foregroundStyle(.secondary)
+            Text(store.errorMessage ?? "No matches in the next few days.")
+                .font(.callout)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 32)
+    }
+
     private var header: some View {
         HStack(spacing: 8) {
             Image(systemName: "trophy.fill")
@@ -39,12 +68,18 @@ struct ScoreboardView: View {
             Text("World Cup 2026")
                 .font(.headline)
             Spacer()
-            Text("SAMPLE DATA")
-                .font(.caption2.weight(.semibold))
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
-                .background(.orange.opacity(0.2), in: Capsule())
-                .foregroundStyle(.orange)
+            Button {
+                Task { await store.refresh() }
+            } label: {
+                if store.isRefreshing {
+                    ProgressView()
+                        .controlSize(.small)
+                } else {
+                    Image(systemName: "arrow.clockwise")
+                }
+            }
+            .buttonStyle(.borderless)
+            .help("Refresh now")
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
@@ -53,9 +88,20 @@ struct ScoreboardView: View {
 
     private var footer: some View {
         HStack {
-            Text("Live scores arrive in Phase 2")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            if let error = store.errorMessage, !store.matches.isEmpty {
+                Label(error, systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+                    .lineLimit(1)
+            } else if let updated = store.lastUpdated {
+                Text("Updated \(updated.formatted(date: .omitted, time: .shortened))")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                Text("Loading…")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
             Spacer()
             Button("Quit") {
                 NSApplication.shared.terminate(nil)
@@ -77,5 +123,5 @@ struct ScoreboardView: View {
 
 #Preview {
     ScoreboardView()
-        .environmentObject(MatchStore())
+        .environmentObject(MatchStore.preview)
 }

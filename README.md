@@ -24,7 +24,7 @@ If Xcode complains about signing, select the *MenuScore* target →
 ## Roadmap
 
 - [x] **Phase 1 — Skeleton**: menu bar item + styled popover with sample data
-- [ ] **Phase 2 — Live data**: API client, polling engine, real scores
+- [x] **Phase 2 — Live data**: API client, polling engine, real scores
 - [ ] **Phase 3 — Stats panel**: match detail, scorers, standings
 - [ ] **Phase 4 — Polish**: favorite team, notifications, launch at login, settings
 - [ ] **Phase 5 — Distribution**: icon, notarization, auto-updates
@@ -32,7 +32,12 @@ If Xcode complains about signing, select the *MenuScore* target →
 ## Architecture notes
 
 - Pure SwiftUI using `MenuBarExtra` with the `.window` style.
-- `MatchStore` is the single source of truth for match data; in Phase 2 it
-  will poll a `WorldCupAPI` protocol so data providers are swappable.
-- The app is sandboxed with the network-client entitlement already enabled,
-  ready for Phase 2.
+- `MatchStore` is the single source of truth: it polls the API on an
+  adaptive cadence (30 s while a match is live, 60 s near kickoff,
+  5 min otherwise) and exposes live/upcoming/finished collections.
+- Data comes from ESPN's public scoreboard JSON (`site.api.espn.com`,
+  league `fifa.world`) — no API key needed. It is unofficial, so the
+  decoder treats every field as optional and the provider sits behind
+  the `WorldCupAPIClient` protocol, making it swappable (e.g. for
+  API-Football) without touching the store or views.
+- The app is sandboxed with only the network-client entitlement.
