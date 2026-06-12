@@ -1,25 +1,29 @@
 import SwiftUI
 
-/// The panel that opens when the menu bar item is clicked.
+/// The panel that opens when the menu bar item is clicked. Flat rows
+/// with hairline dividers on the system's frosted panel material.
 struct ScoreboardView: View {
     @EnvironmentObject private var store: MatchStore
+
+    private var orderedMatches: [Match] {
+        store.liveMatches + store.upcomingMatches + store.finishedMatches
+    }
 
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 0) {
                 header
+                Divider()
 
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 12) {
-                        if store.matches.isEmpty {
-                            emptyState
-                        } else {
-                            matchSections
-                        }
+                    if store.matches.isEmpty {
+                        emptyState
+                    } else {
+                        matchList
                     }
-                    .padding(12)
                 }
 
+                Divider()
                 footer
             }
             .navigationDestination(for: Match.self) { match in
@@ -30,35 +34,23 @@ struct ScoreboardView: View {
         .frame(maxHeight: 480)
     }
 
-    @ViewBuilder
-    private var matchSections: some View {
-        if !store.liveMatches.isEmpty {
-            sectionLabel("Live", color: Brand.red)
-            ForEach(store.liveMatches) { match in
-                matchLink(match)
-            }
-        }
-        if !store.upcomingMatches.isEmpty {
-            sectionLabel("Upcoming")
-            ForEach(store.upcomingMatches) { match in
-                matchLink(match)
-            }
-        }
-        if !store.finishedMatches.isEmpty {
-            sectionLabel("Results")
-            ForEach(store.finishedMatches) { match in
-                matchLink(match)
-            }
-        }
-    }
+    private var matchList: some View {
+        VStack(spacing: 0) {
+            ForEach(orderedMatches) { match in
+                NavigationLink(value: match) {
+                    MatchRowView(match: match)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("Show match details")
 
-    private func matchLink(_ match: Match) -> some View {
-        NavigationLink(value: match) {
-            MatchRowView(match: match)
-                .contentShape(Rectangle())
+                if match.id != orderedMatches.last?.id {
+                    Divider()
+                        .padding(.leading, 14)
+                }
+            }
         }
-        .buttonStyle(.plain)
-        .help("Show match details")
+        .padding(.vertical, 2)
     }
 
     private var emptyState: some View {
@@ -76,13 +68,11 @@ struct ScoreboardView: View {
     }
 
     private var header: some View {
-        HStack(spacing: 8) {
-            Text("⚽️")
-                .font(.system(size: 15))
-            Text("MENUSCORE ′26")
-                .font(Brand.displayFont(size: 15))
-                .italic()
-                .tracking(0.5)
+        HStack(spacing: 7) {
+            Image(systemName: "soccerball")
+                .foregroundStyle(.secondary)
+            Text("World Cup 2026")
+                .font(.headline)
             Spacer()
             Button {
                 Task { await store.refresh() }
@@ -92,16 +82,13 @@ struct ScoreboardView: View {
                         .controlSize(.small)
                 } else {
                     Image(systemName: "arrow.clockwise")
-                        .fontWeight(.semibold)
                 }
             }
             .buttonStyle(.borderless)
             .help("Refresh now")
         }
-        .foregroundStyle(.white)
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .background(Brand.gradient)
     }
 
     private var footer: some View {
@@ -127,16 +114,8 @@ struct ScoreboardView: View {
             .keyboardShortcut("q")
             .controlSize(.small)
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 14)
         .padding(.vertical, 8)
-        .background(.quaternary.opacity(0.5))
-    }
-
-    private func sectionLabel(_ title: String, color: Color = .secondary) -> some View {
-        Text(title.uppercased())
-            .font(.caption2.weight(.heavy))
-            .tracking(1)
-            .foregroundStyle(color)
     }
 }
 

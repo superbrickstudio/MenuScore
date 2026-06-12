@@ -1,80 +1,99 @@
 import SwiftUI
 
-/// One match in the scoreboard list.
+/// One match as a flat, full-width row: flags at the edges, the score
+/// or kickoff time centered, stage caption above, status below.
 struct MatchRowView: View {
     let match: Match
 
-    var body: some View {
-        VStack(spacing: 6) {
-            HStack {
-                teamLabel(match.home)
-                Spacer()
-                centerLabel
-                Spacer()
-                teamLabel(match.away, trailing: true)
-            }
+    @State private var isHovered = false
 
-            HStack(spacing: 4) {
-                if match.status.isLive {
-                    LiveDot()
-                }
-                Text(match.status.shortLabel)
-                    .font(.caption2.weight(match.status.isLive ? .bold : .regular))
-                    .foregroundStyle(match.status.isLive ? Brand.red : Color.secondary)
+    var body: some View {
+        HStack(alignment: .center) {
+            teamColumn(match.home)
+            Spacer()
+            VStack(spacing: 1) {
                 if let stage = match.stage {
-                    Text("· \(stage)")
+                    Text(stage)
                         .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.tertiary)
                         .lineLimit(1)
                 }
+                centerLabel
+                statusLine
             }
+            Spacer()
+            teamColumn(match.away)
         }
-        .padding(10)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 9)
         .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(.background.opacity(0.6))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .strokeBorder(
-                            match.status.isLive
-                                ? AnyShapeStyle(Brand.gradient)
-                                : AnyShapeStyle(Color.primary.opacity(0.08)),
-                            lineWidth: match.status.isLive ? 1.5 : 1
-                        )
-                )
+            Rectangle()
+                .fill(isHovered ? Color.primary.opacity(0.06) : .clear)
         )
+        .onHover { isHovered = $0 }
     }
 
+    @ViewBuilder
     private var centerLabel: some View {
-        Group {
+        switch match.status {
+        case .upcoming(let kickoff):
+            Text(kickoff.formatted(date: .omitted, time: .shortened))
+                .font(.title3.weight(.semibold).monospacedDigit())
+        default:
             if let home = match.homeScore, let away = match.awayScore {
                 Text("\(home) – \(away)")
-                    .font(Brand.displayFont(size: 19).monospacedDigit())
+                    .font(.title3.weight(.semibold).monospacedDigit())
             } else {
-                Text("vs")
-                    .font(.callout)
+                Text("–")
+                    .font(.title3.weight(.semibold))
                     .foregroundStyle(.secondary)
             }
         }
     }
 
-    private func teamLabel(_ team: Team, trailing: Bool = false) -> some View {
-        HStack(spacing: 6) {
-            if trailing {
-                Text(team.code).font(.callout.weight(.semibold))
-                if !team.flag.isEmpty { Text(team.flag).font(.title3) }
-            } else {
-                if !team.flag.isEmpty { Text(team.flag).font(.title3) }
-                Text(team.code).font(.callout.weight(.semibold))
+    @ViewBuilder
+    private var statusLine: some View {
+        switch match.status {
+        case .live(let display):
+            HStack(spacing: 4) {
+                LiveDot()
+                Text(display)
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(Brand.live)
             }
+        case .finished:
+            Text("FT")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        case .upcoming(let kickoff):
+            Text(relativeDay(of: kickoff))
+                .font(.caption2)
+                .foregroundStyle(.secondary)
         }
+    }
+
+    private func relativeDay(of date: Date) -> String {
+        let calendar = Calendar.current
+        if calendar.isDateInToday(date) { return "Today" }
+        if calendar.isDateInTomorrow(date) { return "Tomorrow" }
+        return date.formatted(.dateTime.weekday(.wide))
+    }
+
+    private func teamColumn(_ team: Team) -> some View {
+        VStack(spacing: 3) {
+            Text(team.flag.isEmpty ? "⚽️" : team.flag)
+                .font(.system(size: 24))
+            Text(team.code)
+                .font(.caption.weight(.semibold))
+        }
+        .frame(width: 52)
         .help(team.name)
     }
 }
 
 /// Pulsing dot for live matches.
 struct LiveDot: View {
-    var color: Color = Brand.red
+    var color: Color = Brand.live
     @State private var pulsing = false
 
     var body: some View {
