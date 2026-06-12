@@ -50,6 +50,10 @@ struct MatchDetailView: View {
         }
         .frame(width: 320)
         .frame(maxHeight: 480)
+        // The branded backBar handles navigation; hide the system back
+        // button and its toolbar strip.
+        .navigationBarBackButtonHidden(true)
+        .toolbar(.hidden, for: .windowToolbar)
     }
 
     private var backBar: some View {
