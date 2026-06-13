@@ -89,7 +89,7 @@ struct SettingsView: View {
                         HStack(spacing: 8) {
                             Image(systemName: settings.isFavorite(team.code) ? "star.fill" : "star")
                                 .foregroundStyle(settings.isFavorite(team.code) ? .yellow : .secondary)
-                            Text(team.flag.isEmpty ? "⚽️" : team.flag)
+                            TeamFlag(team: team, height: 16)
                             Text(team.name)
                                 .font(.callout)
                             Spacer()

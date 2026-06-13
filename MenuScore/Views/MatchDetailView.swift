@@ -106,8 +106,7 @@ struct MatchDetailView: View {
 
     private func teamColumn(_ team: Team) -> some View {
         VStack(spacing: 4) {
-            Text(team.flag.isEmpty ? "⚽️" : team.flag)
-                .font(.system(size: 34))
+            TeamFlag(team: team, height: 30)
             Text(team.code)
                 .font(.callout.weight(.bold))
             Text(team.name)

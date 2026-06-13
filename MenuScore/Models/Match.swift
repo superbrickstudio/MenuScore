@@ -4,6 +4,7 @@ struct Team: Identifiable, Hashable {
     let code: String   // three-letter FIFA code, e.g. "MEX"
     let name: String
     let flag: String   // emoji flag, may be empty for unknown codes
+    var logoURL: URL? = nil   // ESPN flag image, when available
 
     var id: String { code }
 

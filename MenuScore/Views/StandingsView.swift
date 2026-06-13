@@ -82,7 +82,7 @@ struct StandingsView: View {
                 .foregroundStyle(position <= 2 ? .primary : .secondary)
                 .frame(width: 18, alignment: .leading)
             HStack(spacing: 5) {
-                Text(row.team.flag.isEmpty ? "⚽️" : row.team.flag)
+                TeamFlag(team: row.team, height: 14)
                 Text(row.team.code).font(.caption.weight(.semibold))
             }
             .frame(maxWidth: .infinity, alignment: .leading)

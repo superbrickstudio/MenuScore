@@ -113,10 +113,12 @@ struct ESPNClient: WorldCupAPIClient {
     private static func team(from competitor: ESPNCompetitor) -> Team? {
         guard let espnTeam = competitor.team else { return nil }
         let code = espnTeam.abbreviation ?? String((espnTeam.displayName ?? "???").prefix(3)).uppercased()
+        let logoString = espnTeam.logo ?? espnTeam.logos?.first?.href
         return Team(
             code: code,
             name: espnTeam.shortDisplayName ?? espnTeam.displayName ?? code,
-            flag: flagEmoji(forFIFACode: code)
+            flag: flagEmoji(forFIFACode: code),
+            logoURL: logoString.flatMap { URL(string: $0) }
         )
     }
 
@@ -265,6 +267,12 @@ struct ESPNTeam: Decodable {
     let abbreviation: String?
     let displayName: String?
     let shortDisplayName: String?
+    let logo: String?
+    let logos: [Logo]?
+
+    struct Logo: Decodable {
+        let href: String?
+    }
 }
 
 struct ESPNStatus: Decodable {
