@@ -4,8 +4,12 @@ import Foundation
 /// swapped (ESPN today; API-Football or similar later) without touching
 /// the store or views.
 protocol WorldCupAPIClient: Sendable {
-    /// Fetches recent, live, and upcoming World Cup matches.
+    /// Fetches recent, live, and upcoming World Cup matches (default window).
     func fetchMatches() async throws -> [Match]
+
+    /// Fetches matches kicking off within the given date range. Used for
+    /// the full tournament (standings, complete team list).
+    func fetchMatches(from: Date, to: Date) async throws -> [Match]
 }
 
 enum APIError: LocalizedError {

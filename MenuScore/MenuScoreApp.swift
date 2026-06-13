@@ -3,13 +3,20 @@ import SwiftUI
 @main
 struct MenuScoreApp: App {
     @StateObject private var store = MatchStore()
+    @StateObject private var settings = AppSettings.shared
 
     var body: some Scene {
         MenuBarExtra {
             ScoreboardView()
                 .environmentObject(store)
+                .environmentObject(settings)
         } label: {
-            MenuBarLabel(match: store.featuredMatch)
+            MenuBarLabel(
+                match: store.featuredMatch(
+                    favorites: settings.favoriteTeamCodes,
+                    pinned: settings.pinnedTeamCode
+                )
+            )
         }
         .menuBarExtraStyle(.window)
     }

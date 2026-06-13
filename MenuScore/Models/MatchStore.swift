@@ -9,6 +9,12 @@ final class MatchStore: ObservableObject {
     @Published private(set) var errorMessage: String?
     @Published private(set) var isRefreshing = false
 
+    /// Full-tournament fetch, loaded on demand for standings and the
+    /// complete team list (the regular `matches` window is only a few days).
+    @Published private(set) var allMatches: [Match] = []
+    @Published private(set) var isLoadingAll = false
+    @Published private(set) var allMatchesError: String?
+
     private let client: any WorldCupAPIClient
     private var pollTask: Task<Void, Never>?
 
@@ -19,10 +25,49 @@ final class MatchStore: ObservableObject {
 
     // MARK: - Derived collections
 
-    /// The match surfaced in the menu bar: a live one first, then the
-    /// next kickoff, then the most recent result.
-    var featuredMatch: Match? {
-        liveMatches.first ?? upcomingMatches.first ?? finishedMatches.first
+    /// The match surfaced in the menu bar, honoring the user's pin and
+    /// favorites before falling back to the global next-up match.
+    func featuredMatch(favorites: Set<String>, pinned: String?) -> Match? {
+        if let pinned, let match = preferredMatch(involving: [pinned]) {
+            return match
+        }
+        if !favorites.isEmpty, let match = preferredMatch(involving: favorites) {
+            return match
+        }
+        return liveMatches.first ?? upcomingMatches.first ?? finishedMatches.first
+    }
+
+    /// First live, else next upcoming, else most recent finished match
+    /// involving any of the given team codes.
+    private func preferredMatch(involving codes: Set<String>) -> Match? {
+        func involves(_ match: Match) -> Bool {
+            codes.contains(match.home.code) || codes.contains(match.away.code)
+        }
+        return liveMatches.first(where: involves)
+            ?? upcomingMatches.first(where: involves)
+            ?? finishedMatches.first(where: involves)
+    }
+
+    func matchInvolves(_ match: Match, anyOf codes: Set<String>) -> Bool {
+        codes.contains(match.home.code) || codes.contains(match.away.code)
+    }
+
+    /// Group standings computed from the full tournament when available,
+    /// otherwise from the current window.
+    var standings: [GroupStanding] {
+        StandingsBuilder.build(from: allMatches.isEmpty ? matches : allMatches)
+    }
+
+    /// Every team seen, for the favorites picker. Prefers the full
+    /// tournament list, falling back to the current window.
+    var allTeams: [Team] {
+        let source = allMatches.isEmpty ? matches : allMatches
+        var seen: [String: Team] = [:]
+        for match in source {
+            seen[match.home.code] = match.home
+            seen[match.away.code] = match.away
+        }
+        return seen.values.sorted { $0.name < $1.name }
     }
 
     var liveMatches: [Match] {
@@ -59,9 +104,16 @@ final class MatchStore: ObservableObject {
         defer { isRefreshing = false }
         do {
             let fresh = try await client.fetchMatches()
+            let settings = AppSettings.shared
             // Only notify on changes between fetches, never on launch.
             if lastUpdated != nil {
-                NotificationManager.shared.notifyChanges(from: matches, to: fresh)
+                if settings.notificationsEnabled {
+                    let filter = settings.favoritesOnlyNotifications
+                        ? settings.favoriteTeamCodes : nil
+                    NotificationManager.shared.notifyChanges(
+                        from: matches, to: fresh, favoritesFilter: filter
+                    )
+                }
             } else {
                 NotificationManager.shared.requestAuthorizationIfNeeded()
             }
@@ -71,6 +123,23 @@ final class MatchStore: ObservableObject {
         } catch {
             // Keep showing the last good data; just surface the problem.
             errorMessage = error.localizedDescription
+        }
+    }
+
+    /// Loads the full tournament for standings and the team list.
+    func loadAllMatches() async {
+        guard !isLoadingAll else { return }
+        isLoadingAll = true
+        defer { isLoadingAll = false }
+        do {
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = TimeZone(identifier: "UTC") ?? .current
+            let from = calendar.date(from: DateComponents(year: 2026, month: 6, day: 1)) ?? .now
+            let to = calendar.date(from: DateComponents(year: 2026, month: 7, day: 31)) ?? .now
+            allMatches = try await client.fetchMatches(from: from, to: to)
+            allMatchesError = nil
+        } catch {
+            allMatchesError = error.localizedDescription
         }
     }
 

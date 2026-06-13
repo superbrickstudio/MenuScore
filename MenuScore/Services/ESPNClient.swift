@@ -8,9 +8,18 @@ import Foundation
 struct ESPNClient: WorldCupAPIClient {
     private static let base = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard"
 
+    /// Default window: yesterday through three days out, so the panel
+    /// shows recent results alongside live and upcoming games.
     func fetchMatches() async throws -> [Match] {
-        var request = URLRequest(url: try scoreboardURL())
-        request.setValue("MenuScore/0.2 (macOS)", forHTTPHeaderField: "User-Agent")
+        try await fetchMatches(
+            from: .now.addingTimeInterval(-86_400),
+            to: .now.addingTimeInterval(3 * 86_400)
+        )
+    }
+
+    func fetchMatches(from: Date, to: Date) async throws -> [Match] {
+        var request = URLRequest(url: try scoreboardURL(from: from, to: to))
+        request.setValue("MenuScore/0.4 (macOS)", forHTTPHeaderField: "User-Agent")
         let (data, response) = try await URLSession.shared.data(for: request)
         if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
             throw APIError.badStatus(http.statusCode)
@@ -21,15 +30,14 @@ struct ESPNClient: WorldCupAPIClient {
             .sorted { $0.date < $1.date }
     }
 
-    /// Window of yesterday through three days out, so the panel shows
-    /// recent results alongside live and upcoming games.
-    private func scoreboardURL() throws -> URL {
+    private func scoreboardURL(from: Date, to: Date) throws -> URL {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyyMMdd"
         formatter.timeZone = TimeZone(identifier: "UTC")
-        let from = formatter.string(from: .now.addingTimeInterval(-86_400))
-        let to = formatter.string(from: .now.addingTimeInterval(3 * 86_400))
-        guard let url = URL(string: "\(Self.base)?dates=\(from)-\(to)") else {
+        let fromString = formatter.string(from: from)
+        let toString = formatter.string(from: to)
+        // limit=300 ensures wide ranges return every match in one page.
+        guard let url = URL(string: "\(Self.base)?dates=\(fromString)-\(toString)&limit=300") else {
             throw APIError.badURL
         }
         return url
