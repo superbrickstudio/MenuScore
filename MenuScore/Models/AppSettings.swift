@@ -1,10 +1,10 @@
 import Foundation
+import Combine
 import ServiceManagement
 
 /// User preferences, persisted to UserDefaults. A single shared instance
 /// so non-view code (the store, notifications) can read it while views
 /// observe it as an EnvironmentObject.
-@MainActor
 final class AppSettings: ObservableObject {
     static let shared = AppSettings()
 
