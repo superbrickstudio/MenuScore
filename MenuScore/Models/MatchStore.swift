@@ -25,49 +25,16 @@ final class MatchStore: ObservableObject {
 
     // MARK: - Derived collections
 
-    /// The match surfaced in the menu bar, honoring the user's pin and
-    /// favorites before falling back to the global next-up match.
-    func featuredMatch(favorites: Set<String>, pinned: String?) -> Match? {
-        if let pinned, let match = preferredMatch(involving: [pinned]) {
-            return match
-        }
-        if !favorites.isEmpty, let match = preferredMatch(involving: favorites) {
-            return match
-        }
-        return liveMatches.first ?? upcomingMatches.first ?? finishedMatches.first
-    }
-
-    /// First live, else next upcoming, else most recent finished match
-    /// involving any of the given team codes.
-    private func preferredMatch(involving codes: Set<String>) -> Match? {
-        func involves(_ match: Match) -> Bool {
-            codes.contains(match.home.code) || codes.contains(match.away.code)
-        }
-        return liveMatches.first(where: involves)
-            ?? upcomingMatches.first(where: involves)
-            ?? finishedMatches.first(where: involves)
-    }
-
-    func matchInvolves(_ match: Match, anyOf codes: Set<String>) -> Bool {
-        codes.contains(match.home.code) || codes.contains(match.away.code)
+    /// The match surfaced in the menu bar: a live one first, then the
+    /// next kickoff, then the most recent result.
+    var featuredMatch: Match? {
+        liveMatches.first ?? upcomingMatches.first ?? finishedMatches.first
     }
 
     /// Group standings computed from the full tournament when available,
     /// otherwise from the current window.
     var standings: [GroupStanding] {
         StandingsBuilder.build(from: allMatches.isEmpty ? matches : allMatches)
-    }
-
-    /// Every team seen, for the favorites picker. Prefers the full
-    /// tournament list, falling back to the current window.
-    var allTeams: [Team] {
-        let source = allMatches.isEmpty ? matches : allMatches
-        var seen: [String: Team] = [:]
-        for match in source {
-            seen[match.home.code] = match.home
-            seen[match.away.code] = match.away
-        }
-        return seen.values.sorted { $0.name < $1.name }
     }
 
     var liveMatches: [Match] {
@@ -104,15 +71,10 @@ final class MatchStore: ObservableObject {
         defer { isRefreshing = false }
         do {
             let fresh = try await client.fetchMatches()
-            let settings = AppSettings.shared
             // Only notify on changes between fetches, never on launch.
             if lastUpdated != nil {
-                if settings.notificationsEnabled {
-                    let filter = settings.favoritesOnlyNotifications
-                        ? settings.favoriteTeamCodes : nil
-                    NotificationManager.shared.notifyChanges(
-                        from: matches, to: fresh, favoritesFilter: filter
-                    )
+                if AppSettings.shared.notificationsEnabled {
+                    NotificationManager.shared.notifyChanges(from: matches, to: fresh)
                 }
             } else {
                 NotificationManager.shared.requestAuthorizationIfNeeded()

@@ -5,7 +5,6 @@ import SwiftUI
 /// as polling updates arrive.
 struct MatchDetailView: View {
     @EnvironmentObject private var store: MatchStore
-    @EnvironmentObject private var settings: AppSettings
     @Environment(\.dismiss) private var dismiss
 
     let matchID: String
@@ -114,14 +113,6 @@ struct MatchDetailView: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(2)
                 .multilineTextAlignment(.center)
-            Button {
-                settings.toggleFavorite(team.code)
-            } label: {
-                Image(systemName: settings.isFavorite(team.code) ? "star.fill" : "star")
-                    .foregroundStyle(settings.isFavorite(team.code) ? .yellow : .secondary)
-            }
-            .buttonStyle(.borderless)
-            .help(settings.isFavorite(team.code) ? "Remove from My Teams" : "Add to My Teams")
         }
         .frame(width: 86)
     }
@@ -180,5 +171,4 @@ struct MatchDetailView: View {
     let match = MatchStore.sampleMatches[0]
     return MatchDetailView(matchID: match.id, fallback: match)
         .environmentObject(MatchStore.preview)
-        .environmentObject(AppSettings.shared)
 }

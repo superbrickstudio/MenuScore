@@ -32,13 +32,13 @@ enum StandingsBuilder {
         for match in matches {
             guard
                 let stage = match.stage,
-                stage.lowercased().hasPrefix("group"),
+                let group = groupLabel(from: stage),
                 match.status == .finished,
                 let homeGoals = match.homeScore,
                 let awayGoals = match.awayScore
             else { continue }
 
-            var table = groups[stage] ?? [:]
+            var table = groups[group] ?? [:]
             var home = table[match.home.code] ?? Standing(team: match.home)
             var away = table[match.away.code] ?? Standing(team: match.away)
 
@@ -62,7 +62,7 @@ enum StandingsBuilder {
 
             table[match.home.code] = home
             table[match.away.code] = away
-            groups[stage] = table
+            groups[group] = table
         }
 
         return groups
@@ -71,6 +71,20 @@ enum StandingsBuilder {
                 return GroupStanding(group: group, rows: rows)
             }
             .sorted { $0.group < $1.group }
+    }
+
+    /// Extracts a normalized group label ("Group A") from a stage string,
+    /// tolerating ESPN variants like "Group A", "Group Stage - Group A",
+    /// or "FIFA World Cup, Group A". Returns nil for non-group stages
+    /// (knockout rounds). World Cup 2026 has groups A–L.
+    private static func groupLabel(from stage: String) -> String? {
+        let upper = stage.uppercased()
+        for letter in "ABCDEFGHIJKL" {
+            if upper.contains("GROUP \(letter)") {
+                return "Group \(letter)"
+            }
+        }
+        return nil
     }
 
     /// FIFA group ranking: points, then goal difference, then goals for,

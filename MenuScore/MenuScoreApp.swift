@@ -5,18 +5,17 @@ struct MenuScoreApp: App {
     @StateObject private var store = MatchStore()
     @StateObject private var settings = AppSettings.shared
 
+    init() {
+        LoginItem.enable()
+    }
+
     var body: some Scene {
         MenuBarExtra {
             ScoreboardView()
                 .environmentObject(store)
                 .environmentObject(settings)
         } label: {
-            MenuBarLabel(
-                match: store.featuredMatch(
-                    favorites: settings.favoriteTeamCodes,
-                    pinned: settings.pinnedTeamCode
-                )
-            )
+            MenuBarLabel(match: store.featuredMatch)
         }
         .menuBarExtraStyle(.window)
     }

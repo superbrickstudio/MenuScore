@@ -19,13 +19,7 @@ final class NotificationManager {
     }
 
     /// Compares two fetches and posts notifications for what changed.
-    /// When `favoritesFilter` is non-nil, only matches involving one of
-    /// those team codes generate notifications.
-    func notifyChanges(
-        from old: [Match],
-        to new: [Match],
-        favoritesFilter: Set<String>? = nil
-    ) {
+    func notifyChanges(from old: [Match], to new: [Match]) {
         let previousByID = Dictionary(
             old.map { ($0.id, $0) },
             uniquingKeysWith: { first, _ in first }
@@ -33,11 +27,6 @@ final class NotificationManager {
 
         for match in new {
             guard let previous = previousByID[match.id] else { continue }
-            if let favoritesFilter,
-               !favoritesFilter.contains(match.home.code),
-               !favoritesFilter.contains(match.away.code) {
-                continue
-            }
 
             if !previous.status.isLive && match.status.isLive {
                 post(
