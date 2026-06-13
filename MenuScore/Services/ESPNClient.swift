@@ -7,6 +7,67 @@ import Foundation
 /// mapping degrades gracefully when something is missing.
 struct ESPNClient: WorldCupAPIClient {
     private static let base = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard"
+    private static let standingsBase = "https://site.api.espn.com/apis/v2/sports/soccer/fifa.world/standings"
+
+    // MARK: - Standings
+
+    func fetchStandings() async throws -> [GroupStanding] {
+        guard let url = URL(string: Self.standingsBase) else { throw APIError.badURL }
+        var request = URLRequest(url: url)
+        request.setValue("MenuScore/0.5 (macOS)", forHTTPHeaderField: "User-Agent")
+        let (data, response) = try await URLSession.shared.data(for: request)
+        if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+            throw APIError.badStatus(http.statusCode)
+        }
+        let decoded = try JSONDecoder().decode(ESPNStandings.self, from: data)
+        return Self.groupStandings(from: decoded)
+    }
+
+    private static func groupStandings(from response: ESPNStandings) -> [GroupStanding] {
+        var result: [GroupStanding] = []
+        for child in response.children ?? [] {
+            guard
+                let name = child.name, name.uppercased().contains("GROUP"),
+                let entries = child.standings?.entries
+            else { continue }
+            // ESPN already returns entries in ranked order (with proper
+            // tiebreakers), so preserve it rather than re-sorting.
+            let rows = entries.compactMap(standing(from:))
+            if !rows.isEmpty {
+                result.append(GroupStanding(group: name, rows: rows))
+            }
+        }
+        return result.sorted { $0.group < $1.group }
+    }
+
+    private static func standing(from entry: ESPNStandings.Entry) -> Standing? {
+        guard let espnTeam = entry.team else { return nil }
+        let code = espnTeam.abbreviation ?? String((espnTeam.displayName ?? "???").prefix(3)).uppercased()
+        let logo = espnTeam.logos?.first?.href
+        let team = Team(
+            code: code,
+            name: espnTeam.shortDisplayName ?? espnTeam.displayName ?? code,
+            flag: flagEmoji(forFIFACode: code),
+            logoURL: logo.flatMap { URL(string: $0) }
+        )
+        func stat(_ names: [String]) -> Int {
+            for name in names {
+                if let match = entry.stats?.first(where: { $0.name == name }), let value = match.value {
+                    return Int(value)
+                }
+            }
+            return 0
+        }
+        return Standing(
+            team: team,
+            played: stat(["gamesPlayed"]),
+            won: stat(["wins"]),
+            drawn: stat(["ties", "draws"]),
+            lost: stat(["losses"]),
+            goalsFor: stat(["pointsFor", "goalsFor"]),
+            goalsAgainst: stat(["pointsAgainst", "goalsAgainst"])
+        )
+    }
 
     /// Default window: yesterday through three days out, so the panel
     /// shows recent results alongside live and upcoming games.
@@ -195,6 +256,44 @@ func flagEmoji(forFIFACode code: String) -> String {
 
 struct ESPNScoreboard: Decodable {
     let events: [ESPNEvent]?
+}
+
+// MARK: - Standings response shapes
+
+struct ESPNStandings: Decodable {
+    let children: [Child]?
+
+    struct Child: Decodable {
+        let name: String?
+        let abbreviation: String?
+        let standings: Table?
+    }
+
+    struct Table: Decodable {
+        let entries: [Entry]?
+    }
+
+    struct Entry: Decodable {
+        let team: EntryTeam?
+        let stats: [Stat]?
+    }
+
+    struct EntryTeam: Decodable {
+        let abbreviation: String?
+        let displayName: String?
+        let shortDisplayName: String?
+        let logos: [Logo]?
+
+        struct Logo: Decodable {
+            let href: String?
+        }
+    }
+
+    struct Stat: Decodable {
+        let name: String?
+        let value: Double?
+        let displayValue: String?
+    }
 }
 
 struct ESPNEvent: Decodable {

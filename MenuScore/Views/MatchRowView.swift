@@ -90,17 +90,25 @@ struct MatchRowView: View {
     }
 }
 
-/// Pulsing dot for live matches.
+/// Steadily pulsing dot for live matches. Driven by TimelineView so the
+/// opacity is recomputed per frame with no implicit animation — the dot
+/// stays fixed in place and never affects layout.
 struct LiveDot: View {
     var color: Color = Brand.live
-    @State private var pulsing = false
 
     var body: some View {
-        Circle()
-            .fill(color)
-            .frame(width: 6, height: 6)
-            .opacity(pulsing ? 0.3 : 1)
-            .animation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true), value: pulsing)
-            .onAppear { pulsing = true }
+        TimelineView(.animation) { context in
+            let t = context.date.timeIntervalSinceReferenceDate
+            // Triangle wave: a 2-second pulse between 0.35 and 1.0 opacity,
+            // using only arithmetic so no math import is needed.
+            let phase = t.truncatingRemainder(dividingBy: 2.0) / 2.0
+            let triangle = phase < 0.5 ? phase * 2 : (1 - phase) * 2
+            let pulse = 0.35 + 0.65 * triangle
+            Circle()
+                .fill(color)
+                .frame(width: 6, height: 6)
+                .opacity(pulse)
+        }
+        .frame(width: 6, height: 6)
     }
 }

@@ -11,7 +11,7 @@ struct StandingsView: View {
             Divider()
 
             ScrollView {
-                if store.isLoadingAll && store.standings.isEmpty {
+                if store.isLoadingStandings && store.standings.isEmpty {
                     loading
                 } else if store.standings.isEmpty {
                     placeholder
@@ -29,7 +29,7 @@ struct StandingsView: View {
         .frame(maxHeight: 480)
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .windowToolbar)
-        .task { await store.loadAllMatches() }
+        .task { await store.loadStandings() }
     }
 
     private var backBar: some View {
@@ -118,7 +118,7 @@ struct StandingsView: View {
             Image(systemName: "tablecells")
                 .font(.largeTitle)
                 .foregroundStyle(.secondary)
-            Text(store.allMatchesError ?? "No group results yet.")
+            Text(store.standingsError ?? "No group results yet.")
                 .font(.callout)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)

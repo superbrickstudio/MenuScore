@@ -9,11 +9,10 @@ final class MatchStore: ObservableObject {
     @Published private(set) var errorMessage: String?
     @Published private(set) var isRefreshing = false
 
-    /// Full-tournament fetch, loaded on demand for standings and the
-    /// complete team list (the regular `matches` window is only a few days).
-    @Published private(set) var allMatches: [Match] = []
-    @Published private(set) var isLoadingAll = false
-    @Published private(set) var allMatchesError: String?
+    /// Group standings, loaded on demand from the standings feed.
+    @Published private(set) var standings: [GroupStanding] = []
+    @Published private(set) var isLoadingStandings = false
+    @Published private(set) var standingsError: String?
 
     private let client: any WorldCupAPIClient
     private var pollTask: Task<Void, Never>?
@@ -29,12 +28,6 @@ final class MatchStore: ObservableObject {
     /// next kickoff, then the most recent result.
     var featuredMatch: Match? {
         liveMatches.first ?? upcomingMatches.first ?? finishedMatches.first
-    }
-
-    /// Group standings computed from the full tournament when available,
-    /// otherwise from the current window.
-    var standings: [GroupStanding] {
-        StandingsBuilder.build(from: allMatches.isEmpty ? matches : allMatches)
     }
 
     var liveMatches: [Match] {
@@ -88,20 +81,29 @@ final class MatchStore: ObservableObject {
         }
     }
 
-    /// Loads the full tournament for standings and the team list.
-    func loadAllMatches() async {
-        guard !isLoadingAll else { return }
-        isLoadingAll = true
-        defer { isLoadingAll = false }
+    /// Loads group standings: from the dedicated standings feed first,
+    /// falling back to computing them from the full tournament's results.
+    func loadStandings() async {
+        guard !isLoadingStandings else { return }
+        isLoadingStandings = true
+        defer { isLoadingStandings = false }
         do {
+            let fetched = try await client.fetchStandings()
+            if !fetched.isEmpty {
+                standings = fetched
+                standingsError = nil
+                return
+            }
+            // Fallback: compute from finished group matches.
             var calendar = Calendar(identifier: .gregorian)
             calendar.timeZone = TimeZone(identifier: "UTC") ?? .current
             let from = calendar.date(from: DateComponents(year: 2026, month: 6, day: 1)) ?? .now
             let to = calendar.date(from: DateComponents(year: 2026, month: 7, day: 31)) ?? .now
-            allMatches = try await client.fetchMatches(from: from, to: to)
-            allMatchesError = nil
+            let all = try await client.fetchMatches(from: from, to: to)
+            standings = StandingsBuilder.build(from: all)
+            standingsError = standings.isEmpty ? "Standings aren't available yet." : nil
         } catch {
-            allMatchesError = error.localizedDescription
+            standingsError = error.localizedDescription
         }
     }
 

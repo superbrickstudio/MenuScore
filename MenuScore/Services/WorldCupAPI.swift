@@ -7,9 +7,11 @@ protocol WorldCupAPIClient: Sendable {
     /// Fetches recent, live, and upcoming World Cup matches (default window).
     func fetchMatches() async throws -> [Match]
 
-    /// Fetches matches kicking off within the given date range. Used for
-    /// the full tournament (standings, complete team list).
+    /// Fetches matches kicking off within the given date range.
     func fetchMatches(from: Date, to: Date) async throws -> [Match]
+
+    /// Fetches current group standings from the provider's standings feed.
+    func fetchStandings() async throws -> [GroupStanding]
 }
 
 enum APIError: LocalizedError {
